@@ -66,8 +66,8 @@ type Rule struct {
 	DeletedAt          time.Time    `json:"deleted_at"`            // interface Resource Implementer
 	TargetResourceType ResourceType `json:"target_resource_type"`
 	TargetResourceID   string       `json:"target_resource_id,omitempty"`
-	Verb               Verb         `json:"verb,omitempty"`
-	Action             Action       `json:"action,omitempty"`
+	Verb               Verb         `json:"verb"`
+	Action             Action       `json:"action"`
 }
 
 func (r *Rule) GetResourceID() uint64 {

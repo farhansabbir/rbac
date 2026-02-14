@@ -8,6 +8,7 @@ import (
 
 func main() {
 	rule := lib.NewEmptyRule("readonly-rule")
+	rule.UpdateVerb(lib.VerbList)
 	rule2 := lib.NewEmptyRule("writeonly-rule")
 
 	profile := lib.NewProfile("Business User profile", "user profile")
