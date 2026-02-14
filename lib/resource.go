@@ -35,8 +35,10 @@ func (resourceType ResourceType) String() string {
 		return "Permission"
 	case ResourceTypeRule:
 		return "Rule"
-	default:
+	case ResourceTypeNone:
 		return ""
+	default:
+		return "*"
 	}
 }
 

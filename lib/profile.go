@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -8,14 +9,15 @@ import (
 
 type Profile struct {
 	// aka policy
-	ID           uint64       `json:"id"`            // interface Resource Implementer
-	Name         string       `json:"name"`          // interface Resource Implementer
-	Description  string       `json:"description"`   // interface Resource Implementer
-	ResourceType ResourceType `json:"resource_type"` // interface Resource Implementer
-	CreatedAt    time.Time    `json:"created_at"`    // interface Resource Implementer
-	UpdatedAt    time.Time    `json:"updated_at"`    // interface Resource Implementer
-	DeletedAt    time.Time    `json:"deleted_at"`    // interface Resource Implementer
-	Rules        []*Rule      `json:"rules"`
+	ID           uint64             `json:"id"`            // interface Resource Implementer
+	Name         string             `json:"name"`          // interface Resource Implementer
+	Description  string             `json:"description"`   // interface Resource Implementer
+	ResourceType ResourceType       `json:"resource_type"` // interface Resource Implementer
+	CreatedAt    time.Time          `json:"created_at"`    // interface Resource Implementer
+	UpdatedAt    time.Time          `json:"updated_at"`    // interface Resource Implementer
+	DeletedAt    time.Time          `json:"deleted_at"`    // interface Resource Implementer
+	Rules        []*Rule            `json:"-"`
+	RuleMap      map[uint64][]*Rule `json:"rule_map"`
 }
 
 func (p *Profile) GetResourceID() uint64 {
@@ -63,6 +65,7 @@ func NewProfile(name string, description string) *Profile {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 		Rules:        []*Rule{},
+		RuleMap:      make(map[uint64][]*Rule),
 	}
 }
 
@@ -82,13 +85,14 @@ func (p *Profile) UpdateRules(rules []*Rule) *Profile {
 }
 
 func (p *Profile) AddRule(rule *Rule) *Profile {
-	p.Rules = append(p.Rules, rule)
+	valid, _ := rule.IsValidRuleSyntax()
+	if valid {
+		p.RuleMap[uint64(rule.TargetResourceType)] = append(p.RuleMap[uint64(rule.TargetResourceType)], rule)
+		p.Rules = append(p.Rules, rule)
+		return p
+	}
 	return p
 }
-
-// func (p *Profile) GetRules() []*Rule {
-// 	return p.Rules
-// }
 
 func (p *Profile) RemoveRule(ruleID uint64) *Profile {
 	for i, rule := range p.Rules {
@@ -98,4 +102,26 @@ func (p *Profile) RemoveRule(ruleID uint64) *Profile {
 		}
 	}
 	return p
+}
+
+func (p *Profile) GetProfileAsJSON() string {
+	jsonBytes, err := json.Marshal(p)
+	if err != nil {
+		return ""
+	}
+	return string(jsonBytes)
+}
+
+func (p *Profile) GetProfileAsMap() map[string]interface{} {
+	return map[string]interface{}{
+		"id":           p.ID,
+		"name":         p.Name,
+		"description":  p.Description,
+		"resourceType": p.ResourceType,
+		"createdAt":    p.CreatedAt,
+		"updatedAt":    p.UpdatedAt,
+		"deletedAt":    p.DeletedAt,
+		"rules":        p.Rules,
+		"ruleMap":      p.RuleMap,
+	}
 }

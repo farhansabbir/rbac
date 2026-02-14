@@ -34,7 +34,7 @@ func (v Verb) String() string {
 	case VerbExecute:
 		return "execute"
 	default:
-		return ""
+		return "*"
 	}
 }
 
@@ -120,16 +120,17 @@ func NewRule(name string, description string, targetResourceID string, verb Verb
 
 func NewEmptyRule(name string) *Rule {
 	rule := &Rule{
-		ID:               xxhash.Sum64String(name),
-		Name:             name,
-		Description:      "",
-		ResourceType:     ResourceTypeRule,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-		DeletedAt:        time.Time{},
-		TargetResourceID: "",
-		Verb:             0,
-		Action:           ActionDeny,
+		ID:                 xxhash.Sum64String(name),
+		Name:               name,
+		Description:        "",
+		ResourceType:       ResourceTypeRule,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+		DeletedAt:          time.Time{},
+		TargetResourceID:   "",
+		TargetResourceType: ResourceTypeNone,
+		Verb:               0,
+		Action:             ActionDeny,
 	}
 	return rule
 }
@@ -236,8 +237,21 @@ func (r *Rule) GetRuleAsDSL() string {
 	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ID, r.TargetResourceType, r.TargetResourceID, r.Verb, r.Action)
 }
 
-func (r *Rule) IsValidRule() bool {
-	return r.ResourceType == ResourceTypeRule &&
-		(r.TargetResourceType != 0 || r.TargetResourceID != "") &&
-		r.Action != 0
+func (r *Rule) IsValidRuleSyntax() (bool, error) {
+	if r.ResourceType == ResourceTypeRule { // only valid if this is a rule resourcetype, false otherwise
+		if r.TargetResourceType == ResourceTypeAll {
+			if r.TargetResourceID != "" {
+				return false, fmt.Errorf("TargetResourceID must be empty for ResourceTypeAll")
+			}
+		}
+		if r.TargetResourceID != "" {
+			if r.TargetResourceType == ResourceTypeNone {
+				return false, fmt.Errorf("TargetResourceType cannot be ResourceTypeNone when TargetResourceID is set")
+			}
+		}
+
+		return true, nil
+	} else {
+		return false, fmt.Errorf("Not a %s", ResourceTypeRule.String())
+	}
 }
