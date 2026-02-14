@@ -11,6 +11,7 @@ func main() {
 	fmt.Println(resource.GetResourceID())
 	fmt.Println(resource.GetResourceType())
 	fmt.Println(resource.IsActive())
+	fmt.Println(resource.GetResourceCreatedAt())
 	rule := resource.(*lib.Rule)
 
 	fmt.Println(rule.TargetResourceIDs)
