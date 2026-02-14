@@ -5,7 +5,8 @@ import "time"
 type ResourceType uint8
 
 const (
-	ResourceTypeUser ResourceType = iota
+	ResourceTypeNone ResourceType = iota
+	ResourceTypeUser
 	ResourceTypeProfile
 	ResourceTypeURL
 	ResourceTypeOrganization
@@ -13,6 +14,7 @@ const (
 	ResourceTypeRole
 	ResourceTypePermission
 	ResourceTypeRule
+	ResourceTypeAll
 )
 
 func (resourceType ResourceType) String() string {
@@ -34,7 +36,7 @@ func (resourceType ResourceType) String() string {
 	case ResourceTypeRule:
 		return "Rule"
 	default:
-		return "Unknown"
+		return ""
 	}
 }
 

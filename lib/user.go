@@ -7,15 +7,15 @@ import (
 )
 
 type User struct {
-	ID           uint64       `json:"id"`
-	Name         string       `json:"name"`
-	Description  string       `json:"description"`
+	ID           uint64       `json:"id"`            // interface Resource Implementer
+	Name         string       `json:"name"`          // interface Resource Implementer
+	Description  string       `json:"description"`   // interface Resource Implementer
+	ResourceType ResourceType `json:"resource_type"` // interface Resource Implementer
+	CreatedAt    time.Time    `json:"created_at"`    // interface Resource Implementer
+	UpdatedAt    time.Time    `json:"updated_at"`    // interface Resource Implementer
+	DeletedAt    time.Time    `json:"deleted_at"`    // interface Resource Implementer
 	Email        string       `json:"email"`
 	Profiles     []*Profile   `json:"profiles"`
-	ResourceType ResourceType `json:"resource_type"`
-	CreatedAt    time.Time    `json:"created_at"`
-	UpdatedAt    time.Time    `json:"updated_at"`
-	DeletedAt    time.Time    `json:"deleted_at"`
 }
 
 func (u *User) GetResourceType() ResourceType {
@@ -53,14 +53,14 @@ func (u *User) IsActive() bool {
 func NewUser(name string, description string, email string) *User {
 	u := &User{
 		ID:           xxhash.Sum64String(name + description + email),
-		Email:        email,
 		Name:         name,
-		Profiles:     []*Profile{},
 		ResourceType: ResourceTypeUser,
 		Description:  description,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 		DeletedAt:    time.Time{},
+		Profiles:     []*Profile{},
+		Email:        email,
 	}
 	return u
 }

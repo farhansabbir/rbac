@@ -1,70 +1,73 @@
 package lib
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
 )
 
-type Verbs uint8
+type Verb uint8
 
 const (
-	Read Verbs = iota
-	Create
-	Update
-	Delete
-	List
-	Execute
+	VerbRead Verb = 1 << iota
+	VerbCreate
+	VerbUpdate
+	VerbDelete
+	VerbList
+	VerbExecute
 )
 
-func (v Verbs) String() string {
+func (v Verb) String() string {
 	switch v {
-	case Read:
+	case VerbRead:
 		return "read"
-	case Create:
+	case VerbCreate:
 		return "create"
-	case Update:
+	case VerbUpdate:
 		return "update"
-	case Delete:
+	case VerbDelete:
 		return "delete"
-	case List:
+	case VerbList:
 		return "list"
-	case Execute:
+	case VerbExecute:
 		return "execute"
 	default:
-		return "unknown"
+		return ""
 	}
 }
 
 type Action uint8
 
 const (
-	Allow Action = iota
-	Deny
+	ActionAllow Action = 1 << iota
+	ActionDeny
 )
 
 func (a Action) String() string {
 	switch a {
-	case Allow:
+	case ActionAllow:
 		return "allow"
-	case Deny:
+	case ActionDeny:
 		return "deny"
 	default:
-		return "unknown"
+		return "deny"
 	}
 }
 
 type Rule struct {
-	ID                uint64       `json:"id"`
-	Name              string       `json:"name"`
-	Description       string       `json:"description"`
-	TargetResourceIDs []string     `json:"target_resource_ids"`
-	Verbs             []Verbs      `json:"verbs"`
-	Action            Action       `json:"action"`
-	ResourceType      ResourceType `json:"resource_type"`
-	CreatedAt         time.Time    `json:"created_at"`
-	UpdatedAt         time.Time    `json:"updated_at"`
-	DeletedAt         time.Time    `json:"deleted_at"`
+	ID                 uint64       `json:"id"`                    // interface Resource Implementer
+	Name               string       `json:"name,omitempty"`        // interface Resource Implementer
+	Description        string       `json:"description,omitempty"` // interface Resource Implementer
+	ResourceType       ResourceType `json:"resource_type"`         // interface Resource Implementer
+	CreatedAt          time.Time    `json:"created_at"`            // interface Resource Implementer
+	UpdatedAt          time.Time    `json:"updated_at"`            // interface Resource Implementer
+	DeletedAt          time.Time    `json:"deleted_at"`            // interface Resource Implementer
+	TargetResourceType ResourceType `json:"target_resource_type"`
+	TargetResourceID   string       `json:"target_resource_id,omitempty"`
+	Verb               Verb         `json:"verb,omitempty"`
+	Action             Action       `json:"action,omitempty"`
 }
 
 func (r *Rule) GetResourceID() uint64 {
@@ -99,27 +102,43 @@ func (r *Rule) IsActive() bool {
 	return r.DeletedAt.IsZero()
 }
 
-func NewRule(name string, description string, subjectResourceIDs []string, verbs []Verbs, action Action) *Rule {
+func NewRule(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
 	rule := &Rule{
-		ID:                xxhash.Sum64String(name + description),
-		Name:              name,
-		Description:       description,
-		TargetResourceIDs: subjectResourceIDs,
-		Verbs:             verbs,
-		Action:            action,
-		ResourceType:      ResourceTypeRule,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
-		DeletedAt:         time.Time{},
+		ID:               xxhash.Sum64String(name + description),
+		Name:             name,
+		Description:      description,
+		ResourceType:     ResourceTypeRule,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+		DeletedAt:        time.Time{},
+		TargetResourceID: targetResourceID,
+		Verb:             verb,
+		Action:           action,
 	}
 	return rule
 }
 
-func (r *Rule) Update(name string, description string, subjectResourceIDs []string, verbs []Verbs, action Action) *Rule {
+func NewEmptyRule(name string) *Rule {
+	rule := &Rule{
+		ID:               xxhash.Sum64String(name),
+		Name:             name,
+		Description:      "",
+		ResourceType:     ResourceTypeRule,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+		DeletedAt:        time.Time{},
+		TargetResourceID: "",
+		Verb:             0,
+		Action:           ActionDeny,
+	}
+	return rule
+}
+
+func (r *Rule) Update(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
 	r.Name = name
 	r.Description = description
-	r.TargetResourceIDs = subjectResourceIDs
-	r.Verbs = verbs
+	r.TargetResourceID = targetResourceID
+	r.Verb = verb
 	r.Action = action
 	r.UpdatedAt = time.Now()
 	return r
@@ -137,26 +156,21 @@ func (r *Rule) UpdateDescription(description string) *Rule {
 	return r
 }
 
-func (r *Rule) UpdateVerbs(verbs []Verbs) *Rule {
-	r.Verbs = verbs
+func (r *Rule) GetVerb() Verb {
+	return r.Verb
+}
+
+func (r *Rule) UpdateVerb(verb Verb) *Rule {
+	r.Verb = verb
 	r.UpdatedAt = time.Now()
 	return r
 }
 
-func (r *Rule) RemoveVerb(verb Verbs) *Rule {
-	for i, v := range r.Verbs {
-		if v == verb {
-			r.Verbs = append(r.Verbs[:i], r.Verbs[i+1:]...)
-			r.UpdatedAt = time.Now()
-			return r
-		}
-	}
-	return r
-}
-
-func (r *Rule) RemoveVerbs(verbs []Verbs) *Rule {
-	for _, verb := range verbs {
-		r.RemoveVerb(verb)
+func (r *Rule) RemoveVerb(verb Verb) *Rule {
+	if r.Verb == verb {
+		r.Verb = 0
+		r.UpdatedAt = time.Now()
+		return r
 	}
 	return r
 }
@@ -167,26 +181,18 @@ func (r *Rule) UpdateAction(action Action) *Rule {
 	return r
 }
 
-func (r *Rule) UpdateTargetResourceIDs(subjectResourceIDs []string) *Rule {
-	r.TargetResourceIDs = subjectResourceIDs
+func (r *Rule) AddTargetResourceID(targetResourceType ResourceType, targetResourceID string) *Rule {
+	r.TargetResourceType = targetResourceType
+	r.TargetResourceID = targetResourceID
 	r.UpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) RemoveTargetResourceID(deleteID string) *Rule {
-	for i, id := range r.TargetResourceIDs {
-		if id == deleteID {
-			r.TargetResourceIDs = append(r.TargetResourceIDs[:i], r.TargetResourceIDs[i+1:]...)
-			r.UpdatedAt = time.Now()
-			return r
-		}
-	}
-	return r
-}
-
-func (r *Rule) RemoveTargetResourceIDs(deleteIDs []string) *Rule {
-	for _, id := range deleteIDs {
-		r.RemoveTargetResourceID(id)
+	if r.TargetResourceID == deleteID {
+		r.TargetResourceID = ""
+		r.UpdatedAt = time.Now()
+		return r
 	}
 	return r
 }
@@ -199,4 +205,39 @@ func (r *Rule) SoftDelete() *Rule {
 func (r *Rule) Restore() *Rule {
 	r.DeletedAt = time.Time{}
 	return r
+}
+
+func (r *Rule) GetRuleName() string {
+	return r.Name
+}
+
+func (r *Rule) GetRuleDescription() string {
+	return r.Description
+}
+
+func (r *Rule) GetRuleAction() Action {
+	return r.Action
+}
+
+func (r *Rule) GetRuleTargetResourceIDs() string {
+	return r.TargetResourceID
+}
+
+func (r *Rule) GetRuleAsJSON() string {
+	jsonBytes, err := json.Marshal(r)
+	if err != nil {
+		return ""
+	}
+	return string(jsonBytes)
+}
+
+func (r *Rule) GetRuleAsDSL() string {
+	// ruleid:targetresourcetype:targetresourceID:verb:action
+	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ID, r.TargetResourceType, r.TargetResourceID, r.Verb, r.Action)
+}
+
+func (r *Rule) IsValidRule() bool {
+	return r.ResourceType == ResourceTypeRule &&
+		(r.TargetResourceType != 0 || r.TargetResourceID != "") &&
+		r.Action != 0
 }
