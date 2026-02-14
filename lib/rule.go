@@ -65,7 +65,7 @@ type Rule struct {
 	UpdatedAt          time.Time    `json:"updated_at"`            // interface Resource Implementer
 	DeletedAt          time.Time    `json:"deleted_at"`            // interface Resource Implementer
 	TargetResourceType ResourceType `json:"target_resource_type"`
-	TargetResourceID   string       `json:"target_resource_id,omitempty"`
+	TargetResourceID   string       `json:"target_resource_id"`
 	Verb               Verb         `json:"verb"`
 	Action             Action       `json:"action"`
 }
