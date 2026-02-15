@@ -17,7 +17,13 @@ type Profile struct {
 	profCreatedAt    time.Time
 	profUpdatedAt    time.Time
 	profDeletedAt    time.Time
-	profRuleMap      map[uint64][]*Rule
+	profRuleMap      map[uint32][]*Rule
+}
+
+func (p *Profile) GetAssociatedRules(resourceType ResourceType) []*Rule {
+	// rules := []*Rule{}
+	rules := p.profRuleMap[uint32(resourceType)]
+	return rules
 }
 
 func (p *Profile) GetResourceID() uint64 {
@@ -32,7 +38,7 @@ func (p *Profile) GetResourceDescription() string {
 	return p.profDescription
 }
 
-func (p *Profile) GetRuleMap() map[uint64][]*Rule {
+func (p *Profile) GetRuleMap() map[uint32][]*Rule {
 	return p.profRuleMap
 }
 
@@ -64,7 +70,7 @@ func NewProfile(name string, description string) *Profile {
 		profResourceType: ResourceTypeProfile,
 		profCreatedAt:    time.Now(),
 		profUpdatedAt:    time.Now(),
-		profRuleMap:      make(map[uint64][]*Rule),
+		profRuleMap:      make(map[uint32][]*Rule),
 	}
 }
 
@@ -81,7 +87,7 @@ func (p *Profile) UpdateDescription(description string) *Profile {
 func (p *Profile) AddRule(rule *Rule) *Profile {
 	valid, _ := rule.IsValidRuleSyntax()
 	if valid {
-		p.profRuleMap[uint64(rule.GetTargetResourceType())] = append(p.profRuleMap[uint64(rule.GetTargetResourceType())], rule)
+		p.profRuleMap[uint32(rule.GetTargetResourceType())] = append(p.profRuleMap[uint32(rule.GetTargetResourceType())], rule)
 		return p
 	}
 	return p

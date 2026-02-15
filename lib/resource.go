@@ -2,7 +2,7 @@ package lib
 
 import "time"
 
-type ResourceType uint8
+type ResourceType uint32
 
 const (
 	ResourceTypeNone ResourceType = iota
