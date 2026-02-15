@@ -20,6 +20,28 @@ type Profile struct {
 	profRuleMap      map[uint32][]*Rule
 }
 
+func (p *Profile) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		ID           uint64             `json:"profile_id"`
+		Name         string             `json:"profile_name"`
+		Description  string             `json:"profile_description"`
+		ResourceType ResourceType       `json:"profile_resource_type"`
+		CreatedAt    time.Time          `json:"profile_created_at"`
+		UpdatedAt    time.Time          `json:"profile_updated_at"`
+		DeletedAt    time.Time          `json:"profile_deleted_at"`
+		RuleMap      map[uint32][]*Rule `json:"profile_rule_map"`
+	}{
+		ID:           p.profID,
+		Name:         p.profName,
+		Description:  p.profDescription,
+		ResourceType: p.profResourceType,
+		RuleMap:      p.profRuleMap,
+		CreatedAt:    p.profCreatedAt,
+		UpdatedAt:    p.profUpdatedAt,
+		DeletedAt:    p.profDeletedAt,
+	})
+}
+
 func (p *Profile) GetAssociatedRules(resourceType ResourceType) []*Rule {
 	// rules := []*Rule{}
 	rules := p.profRuleMap[uint32(resourceType)]
@@ -99,25 +121,4 @@ func (p *Profile) RemoveRule(ruleID uint64) *Profile {
 		fmt.Println(rule)
 	}
 	return p
-}
-
-func (p *Profile) GetProfileAsJSON() string {
-	jsonBytes, err := json.Marshal(p.GetProfileAsMap())
-	if err != nil {
-		return ""
-	}
-	return string(jsonBytes)
-}
-
-func (p *Profile) GetProfileAsMap() map[string]any {
-	return map[string]any{
-		"id":           p.profID,
-		"name":         p.profName,
-		"description":  p.profDescription,
-		"resourceType": p.profResourceType,
-		"createdAt":    p.profCreatedAt,
-		"updatedAt":    p.profUpdatedAt,
-		"deletedAt":    p.profDeletedAt,
-		"ruleMap":      p.profRuleMap,
-	}
 }

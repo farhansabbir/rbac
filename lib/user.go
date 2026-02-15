@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -16,6 +18,30 @@ type User struct {
 	userDeletedAt    time.Time
 	userEmail        string
 	userProfiles     []*Profile
+}
+
+func (u *User) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		ID           uint64       `json:"user_id"`
+		Name         string       `json:"user_name"`
+		Description  string       `json:"user_description"`
+		ResourceType ResourceType `json:"user_resource_type"`
+		CreatedAt    time.Time    `json:"user_created_at"`
+		UpdatedAt    time.Time    `json:"user_updated_at"`
+		DeletedAt    time.Time    `json:"user_deleted_at"`
+		Email        string       `json:"user_email"`
+		Profiles     []*Profile   `json:"user_profiles"`
+	}{
+		ID:           u.userID,
+		Name:         u.userName,
+		Description:  u.userDescription,
+		ResourceType: u.userResourceType,
+		CreatedAt:    u.userCreatedAt,
+		UpdatedAt:    u.userUpdatedAt,
+		DeletedAt:    u.userDeletedAt,
+		Email:        u.userEmail,
+		Profiles:     u.userProfiles,
+	})
 }
 
 func (u *User) GetResourceType() ResourceType {
@@ -104,4 +130,13 @@ func (u *User) RemoveProfile(profile *Profile) *User {
 		}
 	}
 	return u
+}
+
+func (u *User) GetEmail() string {
+	return u.userEmail
+}
+
+func (u *User) String() string {
+
+	return fmt.Sprintf("User: %s (%s)", u.userName, u.userEmail)
 }
