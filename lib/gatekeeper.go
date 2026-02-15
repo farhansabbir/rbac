@@ -27,8 +27,15 @@ func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, err
 		g.incrementRequestsRejected()
 		return false, fmt.Errorf("RequestResourceType cannot be ResourceTypeNone")
 	}
-	rules_for_request := requestcontext.PrincipalProfile.profRuleMap[uint32(requestcontext.RequestResourceType)]
-	fmt.Println(rules_for_request)
+	var rules_for_request []Rule
+	for _, profile := range requestcontext.PrincipalProfiles {
+		fmt.Println(profile.profRuleMap[uint32(requestcontext.RequestResourceType)])
+		fmt.Println(rules_for_request)
+	}
 	g.incrementRequestsAccepted()
 	return true, nil
+}
+
+func (g *Gatekeeper) GetGKStats() (uint64, uint64) {
+	return g.requestsRejected, g.requestsAccepted
 }

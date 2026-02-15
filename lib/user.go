@@ -65,6 +65,14 @@ func NewUser(name string, description string, email string) *User {
 	return u
 }
 
+func (u *User) GetProfiles() []Profile {
+	userProfiles := []Profile{}
+	for _, profile := range u.userProfiles {
+		userProfiles = append(userProfiles, *profile)
+	}
+	return userProfiles
+}
+
 func (u *User) Update(name string, description string, email string) *User {
 	u.userName = name
 	u.userDescription = description
