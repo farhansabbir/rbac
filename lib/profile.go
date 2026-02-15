@@ -81,7 +81,7 @@ func (p *Profile) UpdateDescription(description string) *Profile {
 func (p *Profile) AddRule(rule *Rule) *Profile {
 	valid, _ := rule.IsValidRuleSyntax()
 	if valid {
-		p.profRuleMap[uint64(rule.TargetResourceType)] = append(p.profRuleMap[uint64(rule.TargetResourceType)], rule)
+		p.profRuleMap[uint64(rule.GetTargetResourceType())] = append(p.profRuleMap[uint64(rule.GetTargetResourceType())], rule)
 		return p
 	}
 	return p
@@ -96,15 +96,15 @@ func (p *Profile) RemoveRule(ruleID uint64) *Profile {
 }
 
 func (p *Profile) GetProfileAsJSON() string {
-	jsonBytes, err := json.Marshal(p)
+	jsonBytes, err := json.Marshal(p.GetProfileAsMap())
 	if err != nil {
 		return ""
 	}
 	return string(jsonBytes)
 }
 
-func (p *Profile) GetProfileAsMap() map[string]interface{} {
-	return map[string]interface{}{
+func (p *Profile) GetProfileAsMap() map[string]any {
+	return map[string]any{
 		"id":           p.profID,
 		"name":         p.profName,
 		"description":  p.profDescription,

@@ -65,121 +65,146 @@ type ActionOption struct {
 }
 
 type Rule struct {
-	ID                 uint64       `json:"id"`                    // interface Resource Implementer
-	Name               string       `json:"name,omitempty"`        // interface Resource Implementer
-	Description        string       `json:"description,omitempty"` // interface Resource Implementer
-	ResourceType       ResourceType `json:"resource_type"`         // interface Resource Implementer
-	CreatedAt          time.Time    `json:"created_at"`            // interface Resource Implementer
-	UpdatedAt          time.Time    `json:"updated_at"`            // interface Resource Implementer
-	DeletedAt          time.Time    `json:"deleted_at"`            // interface Resource Implementer
-	TargetResourceType ResourceType `json:"target_resource_type"`
-	TargetResourceID   string       `json:"target_resource_id"`
-	Verb               Verb         `json:"verb"`
-	Action             Action       `json:"action"`
-	ForwardRuleID      uint64       `json:"forward_rule_id"`
+	ruleID                 uint64
+	ruleName               string
+	ruleDescription        string
+	ruleResourceType       ResourceType
+	ruleCreatedAt          time.Time
+	ruleUpdatedAt          time.Time
+	ruleDeletedAt          time.Time
+	ruleTargetResourceType ResourceType
+	ruleTargetResourceID   string
+	ruleVerb               Verb
+	ruleAction             Action
+	ruleForwardRuleID      uint64
+}
+
+func (r *Rule) MarshalJSON() ([]byte, error) {
+	// We map private fields to a public-facing map or anonymous struct
+	return json.Marshal(struct {
+		ID                 uint64       `json:"id"`
+		Name               string       `json:"name"`
+		TargetResourceType ResourceType `json:"target_resource_type"`
+		TargetResourceID   string       `json:"target_resource_id"`
+		Verb               string       `json:"verb"`
+		Action             string       `json:"action"`
+		ForwardRuleID      uint64       `json:"forward_rule_id,omitempty"`
+	}{
+		ID:                 r.ruleID,
+		Name:               r.ruleName,
+		TargetResourceType: r.ruleTargetResourceType,
+		TargetResourceID:   r.ruleTargetResourceID,
+		Verb:               r.ruleVerb.String(),   // Good chance to use the string representation
+		Action:             r.ruleAction.String(), // for better JSON readability
+		ForwardRuleID:      r.ruleForwardRuleID,
+	})
 }
 
 func (r *Rule) GetResourceID() uint64 {
-	return r.ID
+	return r.ruleID
 }
 
 func (r *Rule) GetResourceType() ResourceType {
-	return r.ResourceType
+	return r.ruleResourceType
 }
 
 func (r *Rule) GetResourceName() string {
-	return r.Name
+	return r.ruleName
 }
 
 func (r *Rule) GetResourceDescription() string {
-	return r.Description
+	return r.ruleDescription
 }
 
 func (r *Rule) GetResourceCreatedAt() time.Time {
-	return r.CreatedAt
+	return r.ruleCreatedAt
 }
 
 func (r *Rule) GetResourceUpdatedAt() time.Time {
-	return r.UpdatedAt
+	return r.ruleUpdatedAt
 }
 
 func (r *Rule) GetResourceDeletedAt() time.Time {
-	return r.DeletedAt
+	return r.ruleDeletedAt
 }
 
 func (r *Rule) IsActive() bool {
-	return r.DeletedAt.IsZero()
+	return r.ruleDeletedAt.IsZero()
 }
 
 func NewRule(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
 	rule := &Rule{
-		ID:               xxhash.Sum64String(name + description),
-		Name:             name,
-		Description:      description,
-		ResourceType:     ResourceTypeRule,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-		DeletedAt:        time.Time{},
-		TargetResourceID: targetResourceID,
-		Verb:             verb,
-		Action:           action,
+		ruleID:               xxhash.Sum64String(name + description),
+		ruleName:             name,
+		ruleDescription:      description,
+		ruleResourceType:     ResourceTypeRule,
+		ruleCreatedAt:        time.Now(),
+		ruleUpdatedAt:        time.Now(),
+		ruleDeletedAt:        time.Time{},
+		ruleTargetResourceID: targetResourceID,
+		ruleVerb:             verb,
+		ruleAction:           action,
 	}
 	return rule
 }
 
 func NewEmptyRule(name string) *Rule {
 	rule := &Rule{
-		ID:                 xxhash.Sum64String(name),
-		Name:               name,
-		Description:        "",
-		ResourceType:       ResourceTypeRule,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
-		DeletedAt:          time.Time{},
-		TargetResourceID:   "",
-		TargetResourceType: ResourceTypeNone,
-		Verb:               0,
-		Action:             ActionDeny,
+		ruleID:                 xxhash.Sum64String(name),
+		ruleName:               name,
+		ruleDescription:        "",
+		ruleResourceType:       ResourceTypeRule,
+		ruleCreatedAt:          time.Now(),
+		ruleUpdatedAt:          time.Now(),
+		ruleDeletedAt:          time.Time{},
+		ruleTargetResourceID:   "",
+		ruleTargetResourceType: ResourceTypeNone,
+		ruleVerb:               0,
+		ruleAction:             ActionDeny,
 	}
 	return rule
 }
 
+func (r *Rule) String() string {
+	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ruleID, r.ruleTargetResourceType, r.ruleTargetResourceID, r.ruleVerb, r.ruleAction)
+}
+
 func (r *Rule) Update(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
-	r.Name = name
-	r.Description = description
-	r.TargetResourceID = targetResourceID
-	r.Verb = verb
-	r.Action = action
-	r.UpdatedAt = time.Now()
+	r.ruleName = name
+	r.ruleDescription = description
+	r.ruleTargetResourceID = targetResourceID
+	r.ruleVerb = verb
+	r.ruleAction = action
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) UpdateName(name string) *Rule {
-	r.Name = name
-	r.UpdatedAt = time.Now()
+	r.ruleName = name
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) UpdateDescription(description string) *Rule {
-	r.Description = description
-	r.UpdatedAt = time.Now()
+	r.ruleDescription = description
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) GetVerb() Verb {
-	return r.Verb
+	return r.ruleVerb
 }
 
 func (r *Rule) UpdateVerb(verb Verb) *Rule {
-	r.Verb = verb
-	r.UpdatedAt = time.Now()
+	r.ruleVerb = verb
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) RemoveVerb(verb Verb) *Rule {
-	if r.Verb == verb {
-		r.Verb = 0
-		r.UpdatedAt = time.Now()
+	if r.ruleVerb == verb {
+		r.ruleVerb = 0
+		r.ruleUpdatedAt = time.Now()
 		return r
 	}
 	return r
@@ -190,87 +215,83 @@ func (r *Rule) UpdateAction(actionOption ActionOption) (*Rule, error) {
 		if actionOption.NextRuleID == 0 {
 			return nil, fmt.Errorf("Invalid NextRuleID for ActionAllowAndForwardToNextRule")
 		}
-		r.ForwardRuleID = actionOption.NextRuleID
+		r.ruleForwardRuleID = actionOption.NextRuleID
 	}
-	r.Action = actionOption.Action
-	r.UpdatedAt = time.Now()
+	r.ruleAction = actionOption.Action
+	r.ruleUpdatedAt = time.Now()
 	return r, nil
 }
 
 func (r *Rule) AddTargetResourceID(targetResourceType ResourceType, targetResourceID string) *Rule {
-	r.TargetResourceType = targetResourceType
-	r.TargetResourceID = targetResourceID
-	r.UpdatedAt = time.Now()
+	r.ruleTargetResourceType = targetResourceType
+	r.ruleTargetResourceID = targetResourceID
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
 func (r *Rule) RemoveTargetResourceID(deleteID string) *Rule {
-	if r.TargetResourceID == deleteID {
-		r.TargetResourceID = ""
-		r.UpdatedAt = time.Now()
+	if r.ruleTargetResourceID == deleteID {
+		r.ruleTargetResourceID = ""
+		r.ruleUpdatedAt = time.Now()
 		return r
 	}
 	return r
 }
 
 func (r *Rule) SoftDelete() *Rule {
-	r.DeletedAt = time.Now()
+	r.ruleDeletedAt = time.Now()
 	return r
 }
 
 func (r *Rule) Restore() *Rule {
-	r.DeletedAt = time.Time{}
+	r.ruleDeletedAt = time.Time{}
 	return r
 }
 
 func (r *Rule) GetRuleName() string {
-	return r.Name
+	return r.ruleName
 }
 
 func (r *Rule) GetRuleDescription() string {
-	return r.Description
+	return r.ruleDescription
 }
 
 func (r *Rule) GetRuleAction() Action {
-	return r.Action
+	return r.ruleAction
+}
+
+func (r *Rule) GetTargetResourceType() ResourceType {
+	return r.ruleTargetResourceType
 }
 
 func (r *Rule) GetRuleTargetResourceIDs() string {
-	return r.TargetResourceID
-}
-
-func (r *Rule) GetRuleAsJSON() string {
-	jsonBytes, err := json.Marshal(r)
-	if err != nil {
-		return ""
-	}
-	return string(jsonBytes)
+	return r.ruleTargetResourceID
 }
 
 func (r *Rule) GetRuleAsDSL() string {
 	// ruleid:targetresourcetype:targetresourceID:verb:action
-	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ID, r.TargetResourceType, r.TargetResourceID, r.Verb, r.Action)
+	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ruleID, r.ruleTargetResourceType, r.ruleTargetResourceID, r.ruleVerb, r.ruleAction)
 }
 
 func (r *Rule) IsValidRuleSyntax() (bool, error) {
-	if r.ResourceType == ResourceTypeRule { // only valid if this is a rule resourcetype, false otherwise
-		if r.TargetResourceType == ResourceTypeAll {
-			if r.TargetResourceID != "" {
+	if r.ruleResourceType == ResourceTypeRule { // only valid if this is a rule resourcetype, false otherwise
+		if r.ruleTargetResourceType == ResourceTypeAll {
+			if r.ruleTargetResourceID != "" {
 				return false, fmt.Errorf("TargetResourceID must be empty for ResourceTypeAll")
 			}
 		}
-		if r.TargetResourceID != "" {
-			if r.TargetResourceType == ResourceTypeNone {
+		if r.ruleTargetResourceID != "" {
+			if r.ruleTargetResourceType == ResourceTypeNone {
 				return false, fmt.Errorf("TargetResourceType cannot be ResourceTypeNone when TargetResourceID is set")
 			}
 		}
-		if r.Action == ActionAllowAndForwardToNextRule {
-			if r.ForwardRuleID == 0 {
+		if r.ruleAction == ActionAllowAndForwardToNextRule {
+			if r.ruleForwardRuleID == 0 {
 				return false, fmt.Errorf("ForwardRuleID must be set for ActionAllowAndForwardToNextRule")
 			}
 		}
-		if r.ForwardRuleID != 0 {
-			if r.Action != ActionAllowAndForwardToNextRule {
+		if r.ruleForwardRuleID != 0 {
+			if r.ruleAction != ActionAllowAndForwardToNextRule {
 				return false, fmt.Errorf("ForwardRuleID must be set for ActionAllowAndForwardToNextRule")
 			}
 		}

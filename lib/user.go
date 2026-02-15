@@ -7,15 +7,15 @@ import (
 )
 
 type User struct {
-	ID           uint64       `json:"id"`            // interface Resource Implementer
-	Name         string       `json:"name"`          // interface Resource Implementer
-	Description  string       `json:"description"`   // interface Resource Implementer
-	ResourceType ResourceType `json:"resource_type"` // interface Resource Implementer
-	CreatedAt    time.Time    `json:"created_at"`    // interface Resource Implementer
-	UpdatedAt    time.Time    `json:"updated_at"`    // interface Resource Implementer
-	DeletedAt    time.Time    `json:"deleted_at"`    // interface Resource Implementer
-	Email        string       `json:"email"`
-	Profiles     []*Profile   `json:"profiles"`
+	userID           uint64
+	userName         string
+	userDescription  string
+	userResourceType ResourceType
+	userCreatedAt    time.Time
+	userUpdatedAt    time.Time
+	userDeletedAt    time.Time
+	userEmail        string
+	userProfiles     []*Profile
 }
 
 func (u *User) GetResourceType() ResourceType {
@@ -23,75 +23,75 @@ func (u *User) GetResourceType() ResourceType {
 }
 
 func (u *User) GetResourceID() uint64 {
-	return u.ID
+	return u.userID
 }
 
 func (u *User) GetResourceName() string {
-	return u.Name
+	return u.userName
 }
 
 func (u *User) GetResourceDescription() string {
-	return u.Description
+	return u.userDescription
 }
 
 func (u *User) GetResourceCreatedAt() time.Time {
-	return u.CreatedAt
+	return u.userCreatedAt
 }
 
 func (u *User) GetResourceUpdatedAt() time.Time {
-	return u.UpdatedAt
+	return u.userUpdatedAt
 }
 
 func (u *User) GetResourceDeletedAt() time.Time {
-	return u.DeletedAt
+	return u.userDeletedAt
 }
 
 func (u *User) IsActive() bool {
-	return u.DeletedAt.IsZero()
+	return u.userDeletedAt.IsZero()
 }
 
 func NewUser(name string, description string, email string) *User {
 	u := &User{
-		ID:           xxhash.Sum64String(name + description + email),
-		Name:         name,
-		ResourceType: ResourceTypeUser,
-		Description:  description,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		DeletedAt:    time.Time{},
-		Profiles:     []*Profile{},
-		Email:        email,
+		userID:           xxhash.Sum64String(name + description + email),
+		userName:         name,
+		userResourceType: ResourceTypeUser,
+		userDescription:  description,
+		userCreatedAt:    time.Now(),
+		userUpdatedAt:    time.Now(),
+		userDeletedAt:    time.Time{},
+		userProfiles:     []*Profile{},
+		userEmail:        email,
 	}
 	return u
 }
 
 func (u *User) Update(name string, description string, email string) *User {
-	u.Name = name
-	u.Description = description
-	u.Email = email
-	u.UpdatedAt = time.Now()
+	u.userName = name
+	u.userDescription = description
+	u.userEmail = email
+	u.userUpdatedAt = time.Now()
 	return u
 }
 
 func (u *User) Restore() *User {
-	u.DeletedAt = time.Time{}
+	u.userDeletedAt = time.Time{}
 	return u
 }
 
 func (u *User) SoftDelete() *User {
-	u.DeletedAt = time.Now()
+	u.userDeletedAt = time.Now()
 	return u
 }
 
 func (u *User) AddProfile(profile *Profile) *User {
-	u.Profiles = append(u.Profiles, profile)
+	u.userProfiles = append(u.userProfiles, profile)
 	return u
 }
 
 func (u *User) RemoveProfile(profile *Profile) *User {
-	for i, p := range u.Profiles {
+	for i, p := range u.userProfiles {
 		if p.GetResourceID() == profile.GetResourceID() {
-			u.Profiles = append(u.Profiles[:i], u.Profiles[i+1:]...)
+			u.userProfiles = append(u.userProfiles[:i], u.userProfiles[i+1:]...)
 			return u
 		}
 	}
