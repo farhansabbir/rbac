@@ -90,7 +90,7 @@ func (u *User) AddProfile(profile *Profile) *User {
 
 func (u *User) RemoveProfile(profile *Profile) *User {
 	for i, p := range u.Profiles {
-		if p.ID == profile.ID {
+		if p.GetResourceID() == profile.GetResourceID() {
 			u.Profiles = append(u.Profiles[:i], u.Profiles[i+1:]...)
 			return u
 		}

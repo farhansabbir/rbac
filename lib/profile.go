@@ -10,86 +10,85 @@ import (
 
 type Profile struct {
 	// aka policy
-	ID           uint64       `json:"id"`            // interface Resource Implementer
-	Name         string       `json:"name"`          // interface Resource Implementer
-	Description  string       `json:"description"`   // interface Resource Implementer
-	ResourceType ResourceType `json:"resource_type"` // interface Resource Implementer
-	CreatedAt    time.Time    `json:"created_at"`    // interface Resource Implementer
-	UpdatedAt    time.Time    `json:"updated_at"`    // interface Resource Implementer
-	DeletedAt    time.Time    `json:"deleted_at"`    // interface Resource Implementer
-	// Rules        []*Rule            `json:"-"`
-	RuleMap map[uint64][]*Rule `json:"rule_map"`
+	profID           uint64
+	profName         string
+	profDescription  string
+	profResourceType ResourceType
+	profCreatedAt    time.Time
+	profUpdatedAt    time.Time
+	profDeletedAt    time.Time
+	profRuleMap      map[uint64][]*Rule
 }
 
 func (p *Profile) GetResourceID() uint64 {
-	return p.ID
+	return p.profID
 }
 
 func (p *Profile) GetResourceName() string {
-	return p.Name
+	return p.profName
 }
 
 func (p *Profile) GetResourceDescription() string {
-	return p.Description
+	return p.profDescription
 }
 
 func (p *Profile) GetRuleMap() map[uint64][]*Rule {
-	return p.RuleMap
+	return p.profRuleMap
 }
 
 func (p *Profile) GetResourceType() ResourceType {
-	return p.ResourceType
+	return p.profResourceType
 }
 
 func (p *Profile) GetResourceCreatedAt() time.Time {
-	return p.CreatedAt
+	return p.profCreatedAt
 }
 
 func (p *Profile) GetResourceUpdatedAt() time.Time {
-	return p.UpdatedAt
+	return p.profUpdatedAt
 }
 
 func (p *Profile) GetResourceDeletedAt() time.Time {
-	return p.DeletedAt
+	return p.profDeletedAt
 }
 
 func (p *Profile) IsActive() bool {
-	return p.DeletedAt.IsZero()
+	return p.profDeletedAt.IsZero()
 }
 
 func NewProfile(name string, description string) *Profile {
 	return &Profile{
-		ID:           xxhash.Sum64String(name + description),
-		Name:         name,
-		Description:  description,
-		ResourceType: ResourceTypeProfile,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		RuleMap:      make(map[uint64][]*Rule),
+		profID:           xxhash.Sum64String(name + description),
+		profName:         name,
+		profDescription:  description,
+		profResourceType: ResourceTypeProfile,
+		profCreatedAt:    time.Now(),
+		profUpdatedAt:    time.Now(),
+		profRuleMap:      make(map[uint64][]*Rule),
 	}
 }
 
 func (p *Profile) UpdateName(name string) *Profile {
-	p.Name = name
+	p.profName = name
 	return p
 }
 
 func (p *Profile) UpdateDescription(description string) *Profile {
-	p.Description = description
+	p.profDescription = description
 	return p
 }
 
 func (p *Profile) AddRule(rule *Rule) *Profile {
 	valid, _ := rule.IsValidRuleSyntax()
 	if valid {
-		p.RuleMap[uint64(rule.TargetResourceType)] = append(p.RuleMap[uint64(rule.TargetResourceType)], rule)
+		p.profRuleMap[uint64(rule.TargetResourceType)] = append(p.profRuleMap[uint64(rule.TargetResourceType)], rule)
 		return p
 	}
 	return p
 }
 
 func (p *Profile) RemoveRule(ruleID uint64) *Profile {
-	for targetresourcetype, rule := range p.RuleMap {
+	for targetresourcetype, rule := range p.profRuleMap {
 		fmt.Print(targetresourcetype)
 		fmt.Println(rule)
 	}
@@ -106,13 +105,13 @@ func (p *Profile) GetProfileAsJSON() string {
 
 func (p *Profile) GetProfileAsMap() map[string]interface{} {
 	return map[string]interface{}{
-		"id":           p.ID,
-		"name":         p.Name,
-		"description":  p.Description,
-		"resourceType": p.ResourceType,
-		"createdAt":    p.CreatedAt,
-		"updatedAt":    p.UpdatedAt,
-		"deletedAt":    p.DeletedAt,
-		"ruleMap":      p.RuleMap,
+		"id":           p.profID,
+		"name":         p.profName,
+		"description":  p.profDescription,
+		"resourceType": p.profResourceType,
+		"createdAt":    p.profCreatedAt,
+		"updatedAt":    p.profUpdatedAt,
+		"deletedAt":    p.profDeletedAt,
+		"ruleMap":      p.profRuleMap,
 	}
 }

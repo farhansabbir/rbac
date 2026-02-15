@@ -43,6 +43,7 @@ type Action uint8
 const (
 	ActionAllow Action = 1 << iota
 	ActionDeny
+	ActionAllowAndForwardToNextRule
 )
 
 func (a Action) String() string {
@@ -51,9 +52,16 @@ func (a Action) String() string {
 		return "allow"
 	case ActionDeny:
 		return "deny"
+	case ActionAllowAndForwardToNextRule:
+		return "allow_and_forward_to_next_rule"
 	default:
 		return "deny"
 	}
+}
+
+type ActionOption struct {
+	Action     Action `json:"action"`
+	NextRuleID uint64 `json:"next_rule_id"`
 }
 
 type Rule struct {
@@ -68,6 +76,7 @@ type Rule struct {
 	TargetResourceID   string       `json:"target_resource_id"`
 	Verb               Verb         `json:"verb"`
 	Action             Action       `json:"action"`
+	ForwardRuleID      uint64       `json:"forward_rule_id"`
 }
 
 func (r *Rule) GetResourceID() uint64 {
@@ -176,10 +185,16 @@ func (r *Rule) RemoveVerb(verb Verb) *Rule {
 	return r
 }
 
-func (r *Rule) UpdateAction(action Action) *Rule {
-	r.Action = action
+func (r *Rule) UpdateAction(actionOption ActionOption) (*Rule, error) {
+	if actionOption.Action == ActionAllowAndForwardToNextRule {
+		if actionOption.NextRuleID == 0 {
+			return nil, fmt.Errorf("Invalid NextRuleID for ActionAllowAndForwardToNextRule")
+		}
+		r.ForwardRuleID = actionOption.NextRuleID
+	}
+	r.Action = actionOption.Action
 	r.UpdatedAt = time.Now()
-	return r
+	return r, nil
 }
 
 func (r *Rule) AddTargetResourceID(targetResourceType ResourceType, targetResourceID string) *Rule {
@@ -247,6 +262,16 @@ func (r *Rule) IsValidRuleSyntax() (bool, error) {
 		if r.TargetResourceID != "" {
 			if r.TargetResourceType == ResourceTypeNone {
 				return false, fmt.Errorf("TargetResourceType cannot be ResourceTypeNone when TargetResourceID is set")
+			}
+		}
+		if r.Action == ActionAllowAndForwardToNextRule {
+			if r.ForwardRuleID == 0 {
+				return false, fmt.Errorf("ForwardRuleID must be set for ActionAllowAndForwardToNextRule")
+			}
+		}
+		if r.ForwardRuleID != 0 {
+			if r.Action != ActionAllowAndForwardToNextRule {
+				return false, fmt.Errorf("ForwardRuleID must be set for ActionAllowAndForwardToNextRule")
 			}
 		}
 
