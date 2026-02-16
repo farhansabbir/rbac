@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -18,6 +19,7 @@ type User struct {
 	userDeletedAt    time.Time
 	userEmail        string
 	userProfiles     []*Profile
+	mux              sync.RWMutex
 }
 
 func (u *User) MarshalJSON() ([]byte, error) {
@@ -45,7 +47,7 @@ func (u *User) MarshalJSON() ([]byte, error) {
 }
 
 func (u *User) GetResourceType() ResourceType {
-	return ResourceTypeUser
+	return u.userResourceType
 }
 
 func (u *User) GetResourceID() uint64 {
@@ -78,7 +80,7 @@ func (u *User) IsActive() bool {
 
 func NewUser(name string, description string, email string) *User {
 	u := &User{
-		userID:           xxhash.Sum64String(name + description + email),
+		userID:           xxhash.Sum64String(fmt.Sprint(ResourceTypeUser) + name + description + email),
 		userName:         name,
 		userResourceType: ResourceTypeUser,
 		userDescription:  description,
@@ -92,6 +94,8 @@ func NewUser(name string, description string, email string) *User {
 }
 
 func (u *User) GetProfiles() []Profile {
+	u.mux.RLock()
+	defer u.mux.RUnlock()
 	userProfiles := []Profile{}
 	for _, profile := range u.userProfiles {
 		userProfiles = append(userProfiles, *profile)
@@ -100,6 +104,8 @@ func (u *User) GetProfiles() []Profile {
 }
 
 func (u *User) Update(name string, description string, email string) *User {
+	u.mux.Lock()
+	defer u.mux.Unlock()
 	u.userName = name
 	u.userDescription = description
 	u.userEmail = email
@@ -113,16 +119,22 @@ func (u *User) Restore() *User {
 }
 
 func (u *User) SoftDelete() *User {
+	u.mux.Lock()
+	defer u.mux.Unlock()
 	u.userDeletedAt = time.Now()
 	return u
 }
 
 func (u *User) AddProfile(profile *Profile) *User {
+	u.mux.Lock()
+	defer u.mux.Unlock()
 	u.userProfiles = append(u.userProfiles, profile)
 	return u
 }
 
 func (u *User) RemoveProfile(profile *Profile) *User {
+	u.mux.Lock()
+	defer u.mux.Unlock()
 	for i, p := range u.userProfiles {
 		if p.GetResourceID() == profile.GetResourceID() {
 			u.userProfiles = append(u.userProfiles[:i], u.userProfiles[i+1:]...)

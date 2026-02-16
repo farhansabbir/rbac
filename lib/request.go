@@ -7,39 +7,44 @@ import (
 
 type RequestContext struct {
 	PrincipalID         uint64         `json:"principal_id"`
-	PrincipalProfiles   []Profile      `json:"principal_profile_id"`
+	PrincipalProfiles   []uint64       `json:"principal_profiles"`
 	RequestResourceType ResourceType   `json:"request_resource_type"`
-	RequestResourceID   uint64         `json:"request_resource_id"`
+	RequestResourceID   uint64         `json:"request_resource_id"` // Changed to string for matching
 	RequestVerb         Verb           `json:"request_verb"`
 	ContextDT           time.Time      `json:"context_dt"`
 	Attributes          map[string]any `json:"attributes"`
 }
 
 func (ctx *RequestContext) String() string {
-	return fmt.Sprintf("PrincipalID: %d, PrincipalProfileID: %d, TargetResourceType: %s, TargetResourceID: %d, RequestVerb: %s, Attributes: %v",
-		ctx.PrincipalID, ctx.PrincipalID, ctx.RequestResourceType, ctx.RequestResourceID, ctx.RequestVerb, ctx.Attributes)
+	return fmt.Sprintf("Principal: %d, Target: %s:%d, Verb: %s",
+		ctx.PrincipalID, ctx.RequestResourceType, ctx.RequestResourceID, ctx.RequestVerb)
 }
 
-func NewRequestContext(principalID uint64, principalProfiles []Profile, requestResourceType ResourceType, requestResourceID uint64, requestVerb Verb, requestAttributes map[string]any) (*RequestContext, error) {
-	if principalID == 0 ||
-		principalProfiles == nil ||
-		requestResourceType == 0 || requestResourceType == ResourceTypeNone ||
-		requestResourceID == 0 ||
-		(requestVerb != VerbCreate &&
-			requestVerb != VerbDelete &&
-			requestVerb != VerbUpdate &&
-			requestVerb != VerbRead &&
-			requestVerb != VerbList &&
-			requestVerb != VerbExecute) {
-		return nil, fmt.Errorf("invalid request context, principalID: %d, principalProfiles: %v, requestResourceType: %s, requestResourceID: %d, requestVerb: %s, requestAttributes: %v", principalID, principalProfiles, requestResourceType, requestResourceID, requestVerb, requestAttributes)
+func NewRequestContext(principalID uint64, resType ResourceType, resID uint64, verb Verb, attrs map[string]any) (*RequestContext, error) {
+	// 1. Basic Field Validation
+	if principalID == 0 || resType == ResourceTypeNone || resID == 0 {
+		return nil, fmt.Errorf("missing core context fields")
 	}
+
+	// 2. Verb Validation (Simplified check)
+	isValidVerb := (verb & (VerbRead | VerbCreate | VerbUpdate | VerbDelete | VerbList | VerbExecute)) != 0
+	if !isValidVerb {
+		return nil, fmt.Errorf("invalid request verb: %s", verb)
+	}
+
+	var principalProfiles []uint64
+	profs, _ := GetUserProfilesByUserID(principalID)
+	for _, prof := range profs {
+		principalProfiles = append(principalProfiles, prof.GetResourceID())
+	}
+
 	return &RequestContext{
 		PrincipalID:         principalID,
 		PrincipalProfiles:   principalProfiles,
-		RequestResourceType: requestResourceType,
-		RequestResourceID:   requestResourceID,
-		RequestVerb:         requestVerb,
-		Attributes:          requestAttributes,
+		RequestResourceType: resType,
+		RequestResourceID:   resID,
+		RequestVerb:         verb,
+		Attributes:          attrs,
 		ContextDT:           time.Now(),
 	}, nil
 }

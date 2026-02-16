@@ -79,6 +79,15 @@ type Rule struct {
 	ruleForwardRuleID      uint64
 }
 
+func (r *Rule) String() string {
+	return fmt.Sprintf("rule rule_id=%d rule_name=%s rule_description=%s rule_resource_type=%d rule_created_at=%s rule_updated_at=%s rule_deleted_at=%s rule_target_resource_type=%d rule_target_resource_id=%s rule_verb=%s rule_action=%s rule_forward_rule_id=%d", r.ruleID, r.ruleName, r.ruleDescription, r.ruleResourceType, r.ruleCreatedAt, r.ruleUpdatedAt, r.ruleDeletedAt, r.ruleTargetResourceType, r.ruleTargetResourceID, r.ruleVerb, r.ruleAction, r.ruleForwardRuleID)
+}
+
+func (r *Rule) JSON() string {
+	js, _ := json.Marshal(r)
+	return string(js)
+}
+
 func (r *Rule) MarshalJSON() ([]byte, error) {
 	// We map private fields to a public-facing map or anonymous struct
 	return json.Marshal(struct {
@@ -134,7 +143,7 @@ func (r *Rule) IsActive() bool {
 
 func NewRule(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
 	rule := &Rule{
-		ruleID:               xxhash.Sum64String(name + description),
+		ruleID:               xxhash.Sum64String(fmt.Sprint(ResourceTypeRule) + name + description),
 		ruleName:             name,
 		ruleDescription:      description,
 		ruleResourceType:     ResourceTypeRule,
@@ -165,9 +174,9 @@ func NewEmptyRule(name string) *Rule {
 	return rule
 }
 
-func (r *Rule) String() string {
-	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ruleID, r.ruleTargetResourceType, r.ruleTargetResourceID, r.ruleVerb, r.ruleAction)
-}
+// func (r *Rule) String() string {
+// 	return fmt.Sprintf("rule %d:%s:%s:%s:%s", r.ruleID, r.ruleTargetResourceType, r.ruleTargetResourceID, r.ruleVerb, r.ruleAction)
+// }
 
 func (r *Rule) Update(name string, description string, targetResourceID string, verb Verb, action Action) *Rule {
 	r.ruleName = name

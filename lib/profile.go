@@ -20,6 +20,15 @@ type Profile struct {
 	profRuleMap      map[uint32][]*Rule
 }
 
+func (p *Profile) String() string {
+	return fmt.Sprintf("profile profile_id=%d profile_name=%s profile_description=%s profile_resource_type=%d profile_created_at=%s profile_updated_at=%s profile_deleted_at=%s profile_rule_map=%v", p.profID, p.profName, p.profDescription, p.profResourceType, p.profCreatedAt, p.profUpdatedAt, p.profDeletedAt, p.profRuleMap)
+}
+
+func (p *Profile) JSON() string {
+	js, _ := json.Marshal(p)
+	return string(js)
+}
+
 func (p *Profile) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		ID           uint64             `json:"profile_id"`
@@ -40,6 +49,34 @@ func (p *Profile) MarshalJSON() ([]byte, error) {
 		UpdatedAt:    p.profUpdatedAt,
 		DeletedAt:    p.profDeletedAt,
 	})
+}
+
+func (p *Profile) UnmarshalJSON(data []byte) error {
+	var profile struct {
+		ID           uint64             `json:"profile_id"`
+		Name         string             `json:"profile_name"`
+		Description  string             `json:"profile_description"`
+		ResourceType ResourceType       `json:"profile_resource_type"`
+		CreatedAt    time.Time          `json:"profile_created_at"`
+		UpdatedAt    time.Time          `json:"profile_updated_at"`
+		DeletedAt    time.Time          `json:"profile_deleted_at"`
+		RuleMap      map[uint32][]*Rule `json:"profile_rule_map"`
+	}
+
+	if err := json.Unmarshal(data, &profile); err != nil {
+		return err
+	}
+
+	p.profID = profile.ID
+	p.profName = profile.Name
+	p.profDescription = profile.Description
+	p.profResourceType = profile.ResourceType
+	p.profCreatedAt = profile.CreatedAt
+	p.profUpdatedAt = profile.UpdatedAt
+	p.profDeletedAt = profile.DeletedAt
+	p.profRuleMap = profile.RuleMap
+
+	return nil
 }
 
 func (p *Profile) GetAssociatedRules(resourceType ResourceType) []*Rule {
@@ -86,7 +123,7 @@ func (p *Profile) IsActive() bool {
 
 func NewProfile(name string, description string) *Profile {
 	return &Profile{
-		profID:           xxhash.Sum64String(name + description),
+		profID:           xxhash.Sum64String(fmt.Sprint(ResourceTypeProfile) + name + description),
 		profName:         name,
 		profDescription:  description,
 		profResourceType: ResourceTypeProfile,
