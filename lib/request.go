@@ -33,7 +33,7 @@ func NewRequestContext(principalID uint64, resType ResourceType, resID uint64, v
 	}
 
 	var principalProfiles []uint64
-	profs, _ := GetUserProfilesByUserID(principalID)
+	profs, _ := GetUserProfilesFromUserID(principalID)
 	for _, prof := range profs {
 		principalProfiles = append(principalProfiles, prof.GetResourceID())
 	}
