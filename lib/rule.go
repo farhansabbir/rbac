@@ -17,6 +17,7 @@ const (
 	VerbDelete
 	VerbList
 	VerbExecute
+	VerbAll
 )
 
 func (v Verb) String() string {
@@ -91,17 +92,17 @@ func (r *Rule) JSON() string {
 func (r *Rule) MarshalJSON() ([]byte, error) {
 	// We map private fields to a public-facing map or anonymous struct
 	return json.Marshal(struct {
-		ID                 uint64       `json:"id"`
-		Name               string       `json:"name"`
-		TargetResourceType ResourceType `json:"target_resource_type"`
-		TargetResourceID   string       `json:"target_resource_id"`
-		Verb               string       `json:"verb"`
-		Action             string       `json:"action"`
-		ForwardRuleID      uint64       `json:"forward_rule_id,omitempty"`
+		ID                 uint64 `json:"id"`
+		Name               string `json:"name"`
+		TargetResourceType string `json:"target_resource_type"`
+		TargetResourceID   string `json:"target_resource_id"`
+		Verb               string `json:"verb"`
+		Action             string `json:"action"`
+		ForwardRuleID      uint64 `json:"forward_rule_id,omitempty"`
 	}{
 		ID:                 r.ruleID,
 		Name:               r.ruleName,
-		TargetResourceType: r.ruleTargetResourceType,
+		TargetResourceType: r.ruleTargetResourceType.String(),
 		TargetResourceID:   r.ruleTargetResourceID,
 		Verb:               r.ruleVerb.String(),   // Good chance to use the string representation
 		Action:             r.ruleAction.String(), // for better JSON readability
@@ -231,19 +232,55 @@ func (r *Rule) UpdateAction(actionOption ActionOption) (*Rule, error) {
 	return r, nil
 }
 
-func (r *Rule) AddTargetResourceID(targetResourceType ResourceType, targetResourceID string) *Rule {
+func (r *Rule) SetTargetResourceTypeAndID(targetResourceType ResourceType, targetResourceID string) (*Rule, error) {
+	// Create a real copy of the data, not just the pointer
+	temp := *r
+
+	temp.ruleTargetResourceType = targetResourceType
+	temp.ruleTargetResourceID = targetResourceID
+
+	// Validate the copy
+	if valid, err := temp.IsValidRuleSyntax(); !valid {
+		return nil, fmt.Errorf("invalid rule syntax: %w", err)
+	}
+
+	// Validation passed, now update the original pointer's fields
 	r.ruleTargetResourceType = targetResourceType
 	r.ruleTargetResourceID = targetResourceID
 	r.ruleUpdatedAt = time.Now()
+
+	return r, nil
+}
+
+func (r *Rule) UnsetTargetResourceTypeAndID(targetResourceType ResourceType, targetResourceID string) *Rule {
+	if r.ruleTargetResourceID == targetResourceID && r.ruleTargetResourceType == targetResourceType {
+		r.ruleTargetResourceID = ""
+		r.ruleTargetResourceType = ResourceTypeNone
+		r.ruleUpdatedAt = time.Now()
+	}
 	return r
 }
 
-func (r *Rule) RemoveTargetResourceID(deleteID string) *Rule {
-	if r.ruleTargetResourceID == deleteID {
-		r.ruleTargetResourceID = ""
-		r.ruleUpdatedAt = time.Now()
-		return r
+func (r *Rule) SetTargetResourceType(targetResourceType ResourceType) (*Rule, error) {
+	// 1. Snapshot the current state
+	oldType := r.ruleTargetResourceType
+
+	// 2. Speculatively apply
+	r.ruleTargetResourceType = targetResourceType
+
+	// 3. Validate
+	if valid, _ := r.IsValidRuleSyntax(); !valid {
+		r.ruleTargetResourceType = oldType // Rollback on failure
+		return nil, fmt.Errorf("Invalid rule syntax")
 	}
+
+	r.ruleUpdatedAt = time.Now()
+	return r, nil
+}
+
+func (r *Rule) UnsetTargetResourceType() *Rule {
+	r.ruleTargetResourceType = ResourceTypeNone
+	r.ruleUpdatedAt = time.Now()
 	return r
 }
 
@@ -273,7 +310,7 @@ func (r *Rule) GetTargetResourceType() ResourceType {
 	return r.ruleTargetResourceType
 }
 
-func (r *Rule) GetRuleTargetResourceIDs() string {
+func (r *Rule) GetTargetResourceID() string {
 	return r.ruleTargetResourceID
 }
 
@@ -309,4 +346,5 @@ func (r *Rule) IsValidRuleSyntax() (bool, error) {
 	} else {
 		return false, fmt.Errorf("Not a %s", ResourceTypeRule.String())
 	}
+
 }

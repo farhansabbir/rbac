@@ -5,6 +5,7 @@ import "time"
 type ResourceType uint32
 
 const (
+	ResourceIDAll    string       = "*"
 	ResourceTypeNone ResourceType = iota
 	ResourceTypeUser
 	ResourceTypeProfile
