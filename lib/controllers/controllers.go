@@ -18,16 +18,10 @@ var (
 // Controller is the main entry point (Singleton)
 type Controller struct {
 	ucinstance *UserController
+	pcinstance *ProfileController
+	rcinstance *RuleController
 	ctx        context.Context
 	cancel     context.CancelFunc
-}
-
-// UserController manages user state and events
-type UserController struct {
-	id     uint64
-	mux    sync.RWMutex
-	users  map[uint64]*lib.User
-	events chan string
 }
 
 // GetController initializes the system once and returns the singleton
@@ -41,6 +35,16 @@ func GetController() *Controller {
 			ucinstance: &UserController{
 				id:     xxhash.Sum64String("user_controller_singleton"),
 				users:  make(map[uint64]*lib.User),
+				events: make(chan string, 100), // Buffered channel
+			},
+			pcinstance: &ProfileController{
+				id:       xxhash.Sum64String("profile_controller_singleton"),
+				profiles: make(map[uint64]*lib.Profile),
+				events:   make(chan string, 100), // Buffered channel
+			},
+			rcinstance: &RuleController{
+				id:     xxhash.Sum64String("rule_controller_singleton"),
+				rules:  make(map[uint64]*lib.Rule),
 				events: make(chan string, 100), // Buffered channel
 			},
 		}
@@ -85,47 +89,4 @@ func (c *Controller) Stop() {
 	close(c.ucinstance.events)
 	wg.Wait() // Wait for goroutines to finish
 	fmt.Println("All systems stopped.")
-}
-
-// --- UserController Methods ---
-
-func (uc *UserController) CreateUser(name, description, email string) *lib.User {
-	u := lib.NewUser(name, description, email)
-
-	uc.mux.Lock()
-	uc.users[u.GetResourceID()] = u
-	uc.mux.Unlock()
-
-	uc.events <- fmt.Sprintf("User Created: %s (ID: %d)", u.GetResourceName(), u.GetResourceID())
-	return u
-}
-
-func (uc *UserController) GetUser(id uint64) *lib.User {
-	uc.mux.RLock()
-	defer uc.mux.RUnlock()
-	return uc.users[id]
-}
-
-func (uc *UserController) DeleteUser(id uint64) bool {
-	uc.mux.Lock()
-	defer uc.mux.Unlock()
-
-	if user, ok := uc.users[id]; ok {
-		user.SoftDelete()
-		delete(uc.users, id)
-		uc.events <- fmt.Sprintf("User Deleted: %d", id)
-		return true
-	}
-	return false
-}
-
-func (uc *UserController) ListUsers() []*lib.User {
-	uc.mux.RLock()
-	defer uc.mux.RUnlock()
-
-	list := make([]*lib.User, 0, len(uc.users))
-	for _, u := range uc.users {
-		list = append(list, u)
-	}
-	return list
 }
