@@ -24,7 +24,7 @@ func main() {
 		return
 	}
 	writerule := lib.NewEmptyRule("writeonly-rule")
-	if _, err := writerule.SetTargetResourceType(lib.ResourceTypeAll); err != nil {
+	if _, err := writerule.SetTargetResourceType(lib.ResourceTypeProfile); err != nil {
 		fmt.Println("Error setting target resource type:", err)
 		return
 	}

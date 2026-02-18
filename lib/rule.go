@@ -138,6 +138,10 @@ func (r *Rule) GetResourceDeletedAt() time.Time {
 	return r.ruleDeletedAt
 }
 
+func (r *Rule) GetResourceForwardRuleID() uint64 {
+	return r.ruleForwardRuleID
+}
+
 func (r *Rule) IsActive() bool {
 	return r.ruleDeletedAt.IsZero()
 }
