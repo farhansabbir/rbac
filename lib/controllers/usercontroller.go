@@ -57,4 +57,15 @@ func (uc *UserController) ListUsers() []*lib.User {
 	return list
 }
 
-func (uc *UserController) ListActiveUsers()
+func (uc *UserController) ListActiveUsers() []*lib.User {
+	uc.mux.RLock()
+	defer uc.mux.RUnlock()
+
+	list := make([]*lib.User, 0, len(uc.users))
+	for _, u := range uc.users {
+		if u.IsActive() {
+			list = append(list, u)
+		}
+	}
+	return list
+}
