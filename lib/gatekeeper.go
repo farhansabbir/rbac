@@ -32,6 +32,7 @@ func (g *Gatekeeper) incrementRequestsAccepted() {
 }
 
 func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, error) {
+	requestAccepted := false
 	// If requested resource type is ResourceTypeNone, reject the request
 	if requestcontext.RequestResourceType == ResourceTypeNone {
 		g.incrementRequestsRejected()
@@ -57,25 +58,37 @@ func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, err
 		for _, prof := range profiles {
 			// now check if user has any active rules in that active profiles
 			if rules, err := GetActiveRulesByProfileID(prof.GetResourceID()); err != nil {
-				g.incrementRequestsRejected()
-				return false, err
+				continue
 			} else {
 				// user has active rules in active profiles for active user
 				// now browse the rules and match
 				for _, rule := range rules {
 					// fmt.Print("Username: " + user.GetResourceName())
-					// fmt.Print(rule.JSON())
 					err := RuleMatcher(rule, requestcontext)
 					if err != nil {
 						continue
+					} else {
+						fmt.Println("Matched rule ID:", rule.JSON())
+						if rule.GetRuleAction() == ActionDeny {
+							// g.incrementRequestsRejected()
+							requestAccepted = false
+							continue
+						} else if rule.GetRuleAction() == ActionAllowAndForwardToNextRule {
+							g.incrementRequestsAccepted()
+							fmt.Println("Chained rule for next processing")
+							return true, nil
+						} else if rule.GetRuleAction() == ActionAllow {
+							g.incrementRequestsAccepted()
+							fmt.Println("Allowed")
+							return true, nil
+						}
 					}
-					fmt.Println("Matched rule ID:", rule.JSON())
 				}
 			}
 		}
 	}
-	g.incrementRequestsAccepted()
-	return true, nil
+	g.incrementRequestsRejected()
+	return false, nil
 }
 
 func RuleMatcher(rule Rule, requestcontext *RequestContext) error {

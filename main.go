@@ -15,6 +15,14 @@ func main() {
 		fmt.Println("Error setting target resource type and ID:", err)
 		return
 	}
+	_, err := readallrule.UpdateAction(lib.ActionOption{
+		Action:     lib.ActionAllowAndForwardToNextRule,
+		NextRuleID: 1234567890,
+	})
+	if err != nil {
+		fmt.Println("Error updating action:", err)
+		return
+	}
 	writerule := lib.NewEmptyRule("writeonly-rule")
 	if _, err := writerule.SetTargetResourceType(lib.ResourceTypeAll); err != nil {
 		fmt.Println("Error setting target resource type:", err)
