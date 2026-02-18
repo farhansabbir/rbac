@@ -17,7 +17,7 @@ const (
 	VerbDelete
 	VerbList
 	VerbExecute
-	VerbAll
+	VerbAll = VerbRead | VerbCreate | VerbUpdate | VerbDelete | VerbList | VerbExecute
 )
 
 func (v Verb) String() string {
