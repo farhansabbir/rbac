@@ -2,13 +2,15 @@ package lib
 
 import (
 	"testing"
+
+	"github.com/farhansabbir/rbac/core"
 )
 
 // Helper to reset global state between tests
 func resetGlobals() {
-	Users = []*User{}
-	Profiles = []*Profile{}
-	Rules = []*Rule{}
+	Users = []*core.User{}
+	Profiles = []*core.Profile{}
+	Rules = []*core.Rule{}
 }
 
 func TestGatekeeper_IsRequestAllowed_BasicAllow(t *testing.T) {
@@ -16,23 +18,23 @@ func TestGatekeeper_IsRequestAllowed_BasicAllow(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// 1. Setup Rule: Allow "Read" on "Profile" resources
-	rule := NewEmptyRule("allow-read-profiles")
-	rule.UpdateVerb(VerbRead)
-	rule.SetTargetResourceTypeAndID(ResourceTypeProfile, ResourceIDAll)
-	rule.ruleAction = ActionAllow
+	rule := core.NewEmptyRule("allow-read-profiles")
+	rule.UpdateVerb(core.VerbRead)
+	rule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, core.ResourceIDAll)
+	rule.UpdateAction(core.ActionOption{Action: core.ActionAllow})
 
 	// 2. Setup Profile & User
-	profile := NewProfile("basic-profile", "test profile")
+	profile := core.NewProfile("basic-profile", "test profile")
 	profile.AddRule(rule)
 
-	user := NewUser("John", "User", "john@example.com")
+	user := core.NewUser("John", "User", "john@example.com")
 	user.AddProfile(profile)
 
 	// Register in globals (simulating DB)
 	Users = append(Users, user)
 
 	// 3. Create Request: Can John Read a Profile?
-	ctx, err := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 12345, VerbRead, nil)
+	ctx, err := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 12345, core.VerbRead, nil)
 	if err != nil {
 		t.Fatalf("Failed to create context: %v", err)
 	}
@@ -52,28 +54,28 @@ func TestGatekeeper_DenyOverridesAllow(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// Rule 1: Allow Read (The "Nice" Rule)
-	allowRule := NewEmptyRule("allow-read")
-	allowRule.UpdateVerb(VerbRead)
-	allowRule.SetTargetResourceTypeAndID(ResourceTypeProfile, ResourceIDAll)
-	allowRule.ruleAction = ActionAllow
+	allowRule := core.NewEmptyRule("allow-read")
+	allowRule.UpdateVerb(core.VerbRead)
+	allowRule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, core.ResourceIDAll)
+	allowRule.UpdateAction(core.ActionOption{Action: core.ActionAllow})
 
 	// Rule 2: Deny Read (The "Strict" Rule)
-	denyRule := NewEmptyRule("deny-read")
-	denyRule.UpdateVerb(VerbRead)
-	denyRule.SetTargetResourceTypeAndID(ResourceTypeProfile, ResourceIDAll)
-	denyRule.ruleAction = ActionDeny
+	denyRule := core.NewEmptyRule("deny-read")
+	denyRule.UpdateVerb(core.VerbRead)
+	denyRule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, core.ResourceIDAll)
+	denyRule.UpdateAction(core.ActionOption{Action: core.ActionDeny})
 
 	// Profile has BOTH rules
-	profile := NewProfile("mixed-profile", "mixed")
+	profile := core.NewProfile("mixed-profile", "mixed")
 	profile.AddRule(allowRule)
 	profile.AddRule(denyRule)
 
-	user := NewUser("Jane", "User", "jane@example.com")
+	user := core.NewUser("Jane", "User", "jane@example.com")
 	user.AddProfile(profile)
 	Users = append(Users, user)
 
 	// Request
-	ctx, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 999, VerbRead, nil)
+	ctx, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 999, core.VerbRead, nil)
 
 	// Assert: Deny should win
 	allowed, _ := gk.IsRequestAllowed(ctx)
@@ -87,20 +89,22 @@ func TestGatekeeper_ResourceMismatch(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// Rule: Allow Read on URLS only
-	rule := NewEmptyRule("allow-url-read")
-	rule.UpdateVerb(VerbRead)
-	rule.SetTargetResourceTypeAndID(ResourceTypeURL, ResourceIDAll)
-	rule.ruleAction = ActionAllow
+	rule := core.NewEmptyRule("allow-url-read")
+	rule.UpdateVerb(core.VerbRead)
+	rule.SetTargetResourceTypeAndID(core.ResourceTypeURL, core.ResourceIDAll)
+	rule.UpdateAction(core.ActionOption{
+		Action: core.ActionAllow,
+	})
 
-	profile := NewProfile("url-profile", "urls")
+	profile := core.NewProfile("url-profile", "urls")
 	profile.AddRule(rule)
 
-	user := NewUser("Bob", "User", "bob@example.com")
+	user := core.NewUser("Bob", "User", "bob@example.com")
 	user.AddProfile(profile)
 	Users = append(Users, user)
 
 	// Request: Try to Read a PROFILE (Mismatch!)
-	ctx, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 123, VerbRead, nil)
+	ctx, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 123, core.VerbRead, nil)
 
 	allowed, _ := gk.IsRequestAllowed(ctx)
 	if allowed {
@@ -113,32 +117,34 @@ func TestGatekeeper_VerbBitmaskMatching(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// Rule: Allow Read OR List (Bitmask: 0001 | 0010 = 0011)
-	rule := NewEmptyRule("read-list-rule")
-	rule.UpdateVerb(VerbRead | VerbList)
-	rule.SetTargetResourceTypeAndID(ResourceTypeProfile, ResourceIDAll)
-	rule.ruleAction = ActionAllow
+	rule := core.NewEmptyRule("read-list-rule")
+	rule.UpdateVerb(core.VerbRead | core.VerbList)
+	rule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, core.ResourceIDAll)
+	rule.UpdateAction(core.ActionOption{
+		Action: core.ActionAllow,
+	})
 
-	profile := NewProfile("reader-profile", "reader")
+	profile := core.NewProfile("reader-profile", "reader")
 	profile.AddRule(rule)
 
-	user := NewUser("Alice", "User", "alice@example.com")
+	user := core.NewUser("Alice", "User", "alice@example.com")
 	user.AddProfile(profile)
 	Users = append(Users, user)
 
 	// Request 1: Ask for Read (Should Match)
-	ctxRead, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 555, VerbRead, nil)
+	ctxRead, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 555, core.VerbRead, nil)
 	if allowed, _ := gk.IsRequestAllowed(ctxRead); !allowed {
 		t.Errorf("Expected ALLOW for Read request, got DENY")
 	}
 
 	// Request 2: Ask for List (Should Match)
-	ctxList, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 555, VerbList, nil)
+	ctxList, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 555, core.VerbList, nil)
 	if allowed, _ := gk.IsRequestAllowed(ctxList); !allowed {
 		t.Errorf("Expected ALLOW for List request, got DENY")
 	}
 
 	// Request 3: Ask for Delete (Should NOT Match)
-	ctxDelete, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 555, VerbDelete, nil)
+	ctxDelete, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 555, core.VerbDelete, nil)
 	if allowed, _ := gk.IsRequestAllowed(ctxDelete); allowed {
 		t.Errorf("Expected DENY for Delete request, got ALLOW")
 	}
@@ -149,25 +155,25 @@ func TestGatekeeper_ForwardingRule(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// Rule: Forwarding Action
-	rule := NewEmptyRule("forwarding-rule")
-	rule.UpdateVerb(VerbExecute)
-	rule.SetTargetResourceTypeAndID(ResourceTypeProfile, ResourceIDAll)
+	rule := core.NewEmptyRule("forwarding-rule")
+	rule.UpdateVerb(core.VerbExecute)
+	rule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, core.ResourceIDAll)
 
 	// Set Action to Forward with a dummy NextID
-	rule.UpdateAction(ActionOption{
-		Action:     ActionAllowAndForwardToNextRule,
+	rule.UpdateAction(core.ActionOption{
+		Action:     core.ActionAllowAndForwardToNextRule,
 		NextRuleID: 9999,
 	})
 
-	profile := NewProfile("forward-profile", "forward")
+	profile := core.NewProfile("forward-profile", "forward")
 	profile.AddRule(rule)
 
-	user := NewUser("Dave", "User", "dave@example.com")
+	user := core.NewUser("Dave", "User", "dave@example.com")
 	user.AddProfile(profile)
 	Users = append(Users, user)
 
 	// Request
-	ctx, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 101, VerbExecute, nil)
+	ctx, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 101, core.VerbExecute, nil)
 
 	// Assert
 	allowed, _ := gk.IsRequestAllowed(ctx)
@@ -190,26 +196,28 @@ func TestGatekeeper_WildcardIDMatching(t *testing.T) {
 	gk := NewGatekeeper()
 
 	// Rule: Allow Read on Specific ID "100" only
-	rule := NewEmptyRule("specific-id-rule")
-	rule.UpdateVerb(VerbRead)
-	rule.SetTargetResourceTypeAndID(ResourceTypeProfile, "100") // String ID
-	rule.ruleAction = ActionAllow
+	rule := core.NewEmptyRule("specific-id-rule")
+	rule.UpdateVerb(core.VerbRead)
+	rule.SetTargetResourceTypeAndID(core.ResourceTypeProfile, "100") // String ID
+	rule.UpdateAction(core.ActionOption{
+		Action: core.ActionAllow,
+	})
 
-	profile := NewProfile("strict-profile", "strict")
+	profile := core.NewProfile("strict-profile", "strict")
 	profile.AddRule(rule)
 
-	user := NewUser("Eve", "User", "eve@example.com")
+	user := core.NewUser("Eve", "User", "eve@example.com")
 	user.AddProfile(profile)
 	Users = append(Users, user)
 
 	// Request 1: ID 100 (Should Match)
-	ctxMatch, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 100, VerbRead, nil)
+	ctxMatch, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 100, core.VerbRead, nil)
 	if allowed, _ := gk.IsRequestAllowed(ctxMatch); !allowed {
 		t.Errorf("Expected ALLOW for ID 100, got DENY")
 	}
 
 	// Request 2: ID 101 (Should Fail)
-	ctxMismatch, _ := NewRequestContext(user.GetResourceID(), ResourceTypeProfile, 101, VerbRead, nil)
+	ctxMismatch, _ := NewRequestContext(user.GetResourceID(), core.ResourceTypeProfile, 101, core.VerbRead, nil)
 	if allowed, _ := gk.IsRequestAllowed(ctxMismatch); allowed {
 		t.Errorf("Expected DENY for ID 101, got ALLOW")
 	}

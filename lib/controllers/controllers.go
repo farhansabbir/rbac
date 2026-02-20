@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/farhansabbir/rbac/lib"
+	"github.com/farhansabbir/rbac/core"
 )
 
 var (
@@ -34,17 +34,17 @@ func GetController() *Controller {
 			cancel: cancel,
 			ucinstance: &UserController{
 				id:     xxhash.Sum64String("user_controller_singleton"),
-				users:  make(map[uint64]*lib.User),
+				users:  make(map[uint64]*core.User),
 				events: make(chan string, 100), // Buffered channel
 			},
 			pcinstance: &ProfileController{
 				id:       xxhash.Sum64String("profile_controller_singleton"),
-				profiles: make(map[uint64]*lib.Profile),
+				profiles: make(map[uint64]*core.Profile),
 				events:   make(chan string, 100), // Buffered channel
 			},
 			rcinstance: &RuleController{
 				id:     xxhash.Sum64String("rule_controller_singleton"),
-				rules:  make(map[uint64]*lib.Rule),
+				rules:  make(map[uint64]*core.Rule),
 				events: make(chan string, 100), // Buffered channel
 			},
 		}

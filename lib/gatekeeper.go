@@ -3,12 +3,14 @@ package lib
 import (
 	"fmt"
 	"sync/atomic"
+
+	"github.com/farhansabbir/rbac/core"
 )
 
 var (
-	Users    []*User
-	Profiles []*Profile
-	Rules    []*Rule
+	Users    []*core.User
+	Profiles []*core.Profile
+	Rules    []*core.Rule
 )
 
 type Gatekeeper struct {
@@ -33,7 +35,7 @@ func (g *Gatekeeper) incrementRequestsAccepted() {
 
 func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, error) {
 	// 1. Basic Validation
-	if requestcontext.RequestResourceType == ResourceTypeNone {
+	if requestcontext.RequestResourceType == core.ResourceTypeNone {
 		g.incrementRequestsRejected()
 		return false, fmt.Errorf("RequestResourceType cannot be ResourceTypeNone")
 	}
@@ -66,7 +68,7 @@ func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, err
 		// OPTIMIZATION: Only fetch rules that match the Requested Resource Type OR Global Rules.
 		// This replaces GetActiveRulesByProfileID which was inefficient.
 		relevantRules := prof.GetAssociatedRules(requestcontext.RequestResourceType)
-		globalRules := prof.GetAssociatedRules(ResourceTypeAll)
+		globalRules := prof.GetAssociatedRules(core.ResourceTypeAll)
 
 		allRulesToCheck := append(relevantRules, globalRules...)
 
@@ -80,19 +82,19 @@ func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, err
 			if RuleMatches(rule, requestcontext) {
 				// LOGIC: Deny-Overrides-Allow
 				switch rule.GetRuleAction() {
-				case ActionDeny:
+				case core.ActionDeny:
 					// CRITICAL FIX: Return immediately on Deny.
 					// Do NOT continue checking other rules.
 					fmt.Printf("Explicit DENY by rule ID: %d\n", rule.GetResourceID())
 					g.incrementRequestsRejected()
 					return false, nil
 
-				case ActionAllow:
+				case core.ActionAllow:
 					// Mark as allowed, but KEEP CHECKING in case a later rule Denies it.
 					fmt.Printf("Matched ALLOW rule ID: %d\n", rule.GetResourceID())
 					requestAllowed = true
 
-				case ActionAllowAndForwardToNextRule:
+				case core.ActionAllowAndForwardToNextRule:
 					// Treat as Allow for now (forwarding logic would go here)
 					fmt.Printf("Matched ALLOWandForwardToNextRule rule ID: %d, forward to rule ID: %d\n", rule.GetResourceID(), rule.GetResourceForwardRuleID())
 					requestAllowed = true
@@ -114,10 +116,10 @@ func (g *Gatekeeper) IsRequestAllowed(requestcontext *RequestContext) (bool, err
 
 // RuleMatches returns true if the rule APPLIES to the request.
 // It uses pointers (*Rule) to avoid copying the struct.
-func RuleMatches(rule *Rule, ctx *RequestContext) bool {
+func RuleMatches(rule *core.Rule, ctx *RequestContext) bool {
 	// 1. Check Resource Type
 	// (Already filtered by optimization, but safety check)
-	if rule.GetTargetResourceType() != ResourceTypeAll &&
+	if rule.GetTargetResourceType() != core.ResourceTypeAll &&
 		rule.GetTargetResourceType() != ctx.RequestResourceType {
 		return false
 	}
@@ -126,7 +128,7 @@ func RuleMatches(rule *Rule, ctx *RequestContext) bool {
 	targetID := rule.GetTargetResourceID()
 	reqIDStr := fmt.Sprint(ctx.RequestResourceID)
 
-	if targetID != ResourceIDAll && targetID != reqIDStr {
+	if targetID != core.ResourceIDAll && targetID != reqIDStr {
 		return false
 	}
 
@@ -136,7 +138,7 @@ func RuleMatches(rule *Rule, ctx *RequestContext) bool {
 	// CRITICAL FIX: Use Bitwise AND (&)
 	// If rule is VerbAll, it matches everything.
 	// Otherwise, check if the requested bit is set in the rule.
-	if ruleVerb != VerbAll && (ruleVerb&ctx.RequestVerb) == 0 {
+	if ruleVerb != core.VerbAll && (ruleVerb&ctx.RequestVerb) == 0 {
 		return false
 	}
 
@@ -149,7 +151,7 @@ func (g *Gatekeeper) GetGKStats() (uint64, uint64) {
 	return g.requestsRejected, g.requestsAccepted
 }
 
-func GetUserByID(id uint64) (*User, error) {
+func GetUserByID(id uint64) (*core.User, error) {
 	for _, user := range Users {
 		if user.GetResourceID() == id {
 			return user, nil
@@ -158,8 +160,8 @@ func GetUserByID(id uint64) (*User, error) {
 	return nil, fmt.Errorf("User with ID %d not found", id)
 }
 
-func GetActiveProfilesByUserID(userid uint64) ([]Profile, error) {
-	var profiles []Profile
+func GetActiveProfilesByUserID(userid uint64) ([]core.Profile, error) {
+	var profiles []core.Profile
 	found := false
 	userprofiles, err := GetUserProfilesFromUserID(userid)
 	if err != nil {
@@ -177,8 +179,8 @@ func GetActiveProfilesByUserID(userid uint64) ([]Profile, error) {
 	return profiles, nil
 }
 
-func GetUserProfilesFromUserID(userid uint64) ([]Profile, error) {
-	var profiles []Profile
+func GetUserProfilesFromUserID(userid uint64) ([]core.Profile, error) {
+	var profiles []core.Profile
 	found := false
 	for _, user := range Users {
 		if user.GetResourceID() == userid {
@@ -194,7 +196,7 @@ func GetUserProfilesFromUserID(userid uint64) ([]Profile, error) {
 	return profiles, nil
 }
 
-func GetProfileByID(id uint64) (*Profile, error) {
+func GetProfileByID(id uint64) (*core.Profile, error) {
 	for _, profile := range Profiles {
 		if profile.GetResourceID() == id {
 			return profile, nil
