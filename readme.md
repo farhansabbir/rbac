@@ -1,4 +1,4 @@
-# Go RBAC Library
+# Go RBAC Library (DO NOT USE! UNDER ACTIVE DEVELOPMENT)
 
 A high-performance, thread-safe, and distinct Role-Based Access Control (RBAC) library for Go.
 
