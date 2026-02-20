@@ -23,72 +23,7 @@ Designed with an **AWS IAM** and **Kubernetes** inspired architecture, this libr
 
 ```bash
 go get [github.com/farhansabbir/rbac](https://github.com/farhansabbir/rbac)
-```bash 
-
-## ⚡ Quick Start
-Here is how to wire up the system, create a policy, and enforce it.
-
-```go
-package main
-
-import (
-	"fmt"
-	"[github.com/farhansabbir/rbac/controllers](https://github.com/farhansabbir/rbac/controllers)"
-	"[github.com/farhansabbir/rbac/lib](https://github.com/farhansabbir/rbac/lib)"
-)
-
-func main() {
-	// 1. Initialize the Singleton Controller (Starts Event Loops)
-	ctrl := controllers.GetController()
-	defer ctrl.Stop() // Graceful shutdown
-
-	// 2. Get Sub-Controllers
-	userCtrl := ctrl.GetUserController()
-	profCtrl := ctrl.GetProfileController()
-	ruleCtrl := ctrl.GetRuleController()
-
-	// 3. Create a Rule: "Allow Read on All Profiles"
-	readRule := ruleCtrl.CreateRule(
-		"allow-read-profiles",
-		"Allows reading any profile",
-		lib.ResourceIDAll,      // Target ID: "*"
-		lib.VerbRead,           // Action: Read
-		lib.ActionAllow,        // Effect: Allow
-	)
-	// Important: Set the Target Resource Type
-	readRule.SetTargetResourceType(lib.ResourceTypeProfile)
-
-	// 4. Create a Profile and Attach Rule
-	adminProfile := profCtrl.CreateProfile("AdminProfile", "Read-Only Admin")
-	adminProfile.AddRule(readRule)
-
-	// 5. Create a User and Attach Profile
-	john := userCtrl.CreateUser("John Doe", "DevOps", "john@example.com")
-	john.AddProfile(adminProfile)
-
-	// 6. Initialize the Gatekeeper (Enforcer)
-	// Note: In a real app, pass the controller to the Gatekeeper
-	gk := lib.NewGatekeeper() 
-
-	// 7. Create a Request Context (The "Ticket")
-	// John wants to READ Profile ID 123
-	ctx, _ := lib.NewRequestContext(
-		john.GetResourceID(),
-		lib.ResourceTypeProfile,
-		123,
-		lib.VerbRead,
-		nil,
-	)
-
-	// 8. Ask: Is Request Allowed?
-	allowed, err := gk.IsRequestAllowed(ctx)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	}
-
-	fmt.Printf("Request Allowed: %v\n", allowed)
-}
-```go
+```
 
 ## 🏗 Architecture
 1. Data Models (lib/)
@@ -138,38 +73,6 @@ Decision Logic:
 ❌ Deny: Returns false IMMEDIATELY (stops looping).
 
 Final Result: Returns true only if allowed == true AND no Deny rules were triggered.
-
-🧩 Advanced Usage
-Bitwise Verbs
-
-You can combine verbs to create complex permissions in a single rule.
-
-```go
-// Allow Read AND List AND Execute
-complexVerb := lib.VerbRead | lib.VerbList | lib.VerbExecute
-
-rule.UpdateVerb(complexVerb)
-Soft Deletion
-
-Deleting a user does not remove them from memory immediately. It sets a DeletedAt timestamp.
-
-```Go
-userCtrl.DeleteUser(userID) // User remains in map, but IsActive() returns false
-The Gatekeeper automatically rejects requests from inactive users.
-
-🧪 Running Tests
-The library includes a comprehensive test suite covering wildcard matching, deny-overrides logic, and bitmask checks.
-
-```Bash
-# Run all tests in the lib package
-go test ./lib -v
-Test Coverage:
-
-TestGatekeeper_DenyOverridesAllow: Ensures security is paramount.
-
-TestGatekeeper_WildcardIDMatching: Validates * vs specific IDs.
-
-TestGatekeeper_VerbBitmaskMatching: Validates bitwise logic.
 
 ## 🔮 Roadmap
 [ ] Rule Forwarding: Full implementation of ActionAllowAndForwardToNextRule to chain policies.
