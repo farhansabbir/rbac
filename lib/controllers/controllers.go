@@ -61,6 +61,16 @@ func (c *Controller) GetUserController() *UserController {
 	return c.ucinstance
 }
 
+// GetProfileController returns the sub-controller
+func (c *Controller) GetProfileController() *ProfileController {
+	return c.pcinstance
+}
+
+// GetRuleController returns the sub-controller
+func (c *Controller) GetRuleController() *RuleController {
+	return c.rcinstance
+}
+
 // StartUserControllerEventLoop runs in the background
 func (c *Controller) StartUserControllerEventLoop() {
 	wg.Add(1)
