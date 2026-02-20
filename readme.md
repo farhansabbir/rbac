@@ -65,5 +65,7 @@ Final Result: Returns true only if allowed == true AND no Deny rules were trigge
 
 ## 🔮 Roadmap
 [ ] Rule Forwarding: Full implementation of ActionAllowAndForwardToNextRule to chain policies.
+
 [ ] Attribute-Based Access Control (ABAC): utilize the Attributes map in RequestContext for finer-grained control (e.g., Owner checks).
+
 [ ] Persistence Layer: Add interfaces for SQL/Redis storage in the Controllers.
