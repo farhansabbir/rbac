@@ -50,7 +50,7 @@ func GetController() *Controller {
 		}
 
 		// Start background processes
-		globalController.StartUserControllerEventLoop()
+		globalController.startEventLoop()
 		fmt.Println("System Controller initialized")
 	})
 	return globalController
@@ -71,17 +71,17 @@ func (c *Controller) GetRuleController() *RuleController {
 	return c.rcinstance
 }
 
-// StartUserControllerEventLoop runs in the background
-func (c *Controller) StartUserControllerEventLoop() {
+// StartEventLoop runs in the background
+func (c *Controller) startEventLoop() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fmt.Println("UC event loop running...")
+		fmt.Println("Controller event loop running...")
 
 		for {
 			select {
 			case <-c.ctx.Done():
-				fmt.Println("UC event loop received shutdown signal")
+				fmt.Println("Controller event loop received shutdown signal")
 				return
 			case msg, ok := <-c.ucinstance.events:
 				if !ok {
