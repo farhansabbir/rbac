@@ -31,10 +31,15 @@ go get [github.com/farhansabbir/rbac](https://github.com/farhansabbir/rbac)
 The data layer is composed of three primary entities. All entities implement the Resource interface.
 
 User: The identity (Principal). Holds a list of Profiles.
+
 Profile: A collection of policies (Rules). Acts as the bridge between Users and Rules.
+
 Rule: The atomic logic unit.
+
 Verbs: Bitmask (VerbRead | VerbList).
+
 Actions: Allow, Deny, or AllowAndForward.
+
 Targets: Defines ResourceType (e.g., URL, Project) and ResourceID.
 
 2. State Management (controllers/)
@@ -59,6 +64,7 @@ Check Verb Match (Bitwise &).
 Decision Logic:
 
 ✅ Allow: Sets allowed = true but continues looping.
+
 ❌ Deny: Returns false IMMEDIATELY (stops looping).
 
 Final Result: Returns true only if allowed == true AND no Deny rules were triggered.
